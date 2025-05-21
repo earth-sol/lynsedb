@@ -45,3 +45,7 @@ class Poster:
             httpx.Response: The response object.
         """
         return self.session.get(url, headers=headers)
+
+    def close(self):
+        """Close the underlying HTTP session."""
+        self.session.close()
