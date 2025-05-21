@@ -29,7 +29,19 @@ class IndexSchema:
         return indices
 
     def load_from_dict(self, schema_dict):
-        self.indices = {k: eval(v) for k, v in schema_dict.items()}
+        allowed_types = {
+            'int': int,
+            'float': float,
+            'str': str,
+        }
+
+        indices = {}
+        for k, v in schema_dict.items():
+            if v not in allowed_types:
+                raise ValueError(f"Unsupported field type: {v}")
+            indices[k] = allowed_types[v]
+
+        self.indices = indices
         return self
 
 

@@ -253,7 +253,20 @@ class Index:
                 packed_indices = f.read()
                 indices, index_schema = msgpack.unpackb(packed_indices, raw=False)
                 self._deserialize_indices(indices)
-                self.index_schema = {k: eval(v) for k, v in index_schema.items()}
+
+                type_lookup = {
+                    'int': int,
+                    'float': float,
+                    'str': str,
+                }
+
+                schema = {}
+                for k, v in index_schema.items():
+                    if v not in type_lookup:
+                        raise ValueError(f"Unsupported field type: {v}")
+                    schema[k] = type_lookup[v]
+
+                self.index_schema = schema
         return self
 
     def _serialize_indices(self):
