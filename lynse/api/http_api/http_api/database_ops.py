@@ -92,7 +92,9 @@ def get_environment():
     env_list = ['LYNSE_LOG_LEVEL', 'LYNSE_LOG_PATH', 'LYNSE_TRUNCATE_LOG', 'LYNSE_LOG_WITH_TIME',
                 'LYNSE_KMEANS_EPOCHS', 'LYNSE_SEARCH_CACHE_SIZE']
 
-    params = {key: eval("global_config.key") for key in env_list}
+    # Use direct attribute access on the config object instead of eval to
+    # retrieve configuration values.
+    params = {key: getattr(config, key) for key in env_list}
     try:
         return Response(json.dumps({'status': 'success', 'params': params}, sort_keys=False),
                         mimetype='application/json')
