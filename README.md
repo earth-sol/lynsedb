@@ -68,3 +68,26 @@ After installing the [Client API package](#install-client-api-package-mandatory)
 ```shell
 docker pull birchkwok/lynsedb:latest
 ```
+
+### Write-Ahead Log Configuration
+
+When adding vectors, LynseDB keeps recent writes in memory before flushing them to disk. Two environment variables control this behavior:
+
+- `LYNSE_WAL_BUFFER_SIZE` – maximum number of rows to buffer in memory before a flush occurs. The default is the collection's `chunk_size` (100,000 when using default settings).
+- `LYNSE_WAL_FLUSH_INTERVAL` – time in seconds between automatic flushes. The default is `5` seconds.
+
+Set these variables prior to running LynseDB or starting the Docker container. For example:
+
+```shell
+export LYNSE_WAL_BUFFER_SIZE=50000
+export LYNSE_WAL_FLUSH_INTERVAL=2
+lynse run --host localhost --port 7637
+```
+
+Or with Docker:
+
+```shell
+docker run -e LYNSE_WAL_BUFFER_SIZE=50000 \
+  -e LYNSE_WAL_FLUSH_INTERVAL=2 \
+  -p 7637:7637 birchkwok/lynsedb:latest
+```
