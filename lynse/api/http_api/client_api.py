@@ -71,8 +71,11 @@ class HTTPClient:
         """
 
         raise_if(TypeError, not isinstance(uri, str), 'The URI must be a string.')
-        raise_if(ValueError, not uri.startswith('http://') or uri.startswith('https://'),
-                 'The URI must start with "http://" or "https://".')
+        raise_if(
+            ValueError,
+            not (uri.startswith('http://') or uri.startswith('https://')),
+            'The URI must start with "http://" or "https://".'
+        )
 
         self._session = httpx.Client()
 
