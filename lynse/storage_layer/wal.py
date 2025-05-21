@@ -2,6 +2,8 @@ import numpy as np
 import json
 import os
 import shutil
+import threading
+import time
 from pathlib import Path
 
 from spinesUtils.timer import Timer
@@ -10,6 +12,33 @@ from ..core_components.locks import ThreadLock
 
 
 class WALStorage:
+    """Write-ahead log storage with configurable buffering and periodic flushing.
+
+    Data written through :meth:`write_log_data` is first kept in memory until the
+    buffer reaches ``buffer_size`` rows or ``flush_interval`` seconds have
+    elapsed. A background thread also flushes the buffer periodically to reduce
+    blocking writes.
+
+    Parameters
+    ----------
+    collection_name : str
+        Collection identifier used to name WAL folders.
+    chunk_size : int
+        Number of rows saved in each on-disk log chunk.
+    storage_path : str or Path
+        Directory where WAL data is stored.
+    flush_interval : int, optional
+        Seconds between periodic flushes. Can be overridden by the
+        ``LYNSE_WAL_FLUSH_INTERVAL`` environment variable.
+
+    Environment Variables
+    ---------------------
+    ``LYNSE_WAL_BUFFER_SIZE``
+        Overrides the number of rows to accumulate before flushing.
+    ``LYNSE_WAL_FLUSH_INTERVAL``
+        Overrides the periodic flush interval in seconds.
+    """
+
     def __init__(self, collection_name, chunk_size, storage_path, flush_interval=5):
         self.storage_path = Path(storage_path) / "wal"
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -28,8 +57,10 @@ class WALStorage:
         self.read_dir.mkdir(exist_ok=True)
         self.state_dir.mkdir(exist_ok=True)
 
+        # Configuration from environment variables
         self.chunk_size = chunk_size
-        self.flush_interval = flush_interval
+        self.buffer_size = int(os.getenv('LYNSE_WAL_BUFFER_SIZE', chunk_size))
+        self.flush_interval = int(os.getenv('LYNSE_WAL_FLUSH_INTERVAL', flush_interval))
         self.file_id = 0  # File ID to maintain the naming order
         self.lock = ThreadLock()
 
@@ -43,6 +74,13 @@ class WALStorage:
 
         # Start periodic flush thread
         self.running = True
+        self._flush_thread = threading.Thread(target=self._periodic_flush, daemon=True)
+        self._flush_thread.start()
+
+    def _periodic_flush(self):
+        while self.running:
+            time.sleep(self.flush_interval)
+            self._flush_buffer_to_disk()
 
     def write_log_data(self, data, indices, fields):
         with self.lock:
@@ -60,7 +98,7 @@ class WALStorage:
             self.buffer_fields.extend(fields)
 
             # Check if buffer is full
-            if sum(len(chunk) for chunk in self.buffer_data) >= self.chunk_size:
+            if sum(len(chunk) for chunk in self.buffer_data) >= self.buffer_size:
                 self._flush_buffer_to_disk()
 
             if self.timer.last_timestamp_diff() >= self.flush_interval:
@@ -112,6 +150,7 @@ class WALStorage:
             self.buffer_data = []
             self.buffer_indices = []
             self.buffer_fields = []
+            self.timer.middle_point()
 
     def _write_state_file(self, file_id):
         state_file_path = self.state_dir / f"state_{file_id}.txt"
@@ -190,3 +229,5 @@ class WALStorage:
 
     def stop(self):
         self.running = False
+        if hasattr(self, '_flush_thread'):
+            self._flush_thread.join(timeout=self.flush_interval + 1)
