@@ -7,7 +7,7 @@ def test_http_client_get_environment_matches_route():
     transport = httpx.WSGITransport(app=app)
     with httpx.Client(transport=transport, base_url='http://testserver') as session:
         client = HTTPClient('http://testserver', 'test_db')
-        client._session = session
+        client.set_test_session(session)
         direct_resp = session.get('/get_environment')
         assert direct_resp.status_code == 200
         direct_json = direct_resp.json()
