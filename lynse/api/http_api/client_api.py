@@ -316,8 +316,7 @@ class HTTPClient:
             ExecutionError: If the server returns an error.
         """
         uri = f'{self.uri}/get_environment'
-        data = {"database_name": self.database_name}
-        response = self._session.post(uri, json=data)
+        response = self._session.get(uri)
 
         if response.status_code == 200:
             return response.json()
