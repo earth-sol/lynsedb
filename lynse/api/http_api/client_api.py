@@ -86,6 +86,18 @@ class HTTPClient:
 
         self.database_name = database_name
 
+    def set_test_session(self, session: httpx.Client):
+        """
+        Set a custom httpx.Client session for testing purposes.
+
+        This method allows tests to inject a custom session (e.g., with a test transport)
+        to facilitate integration testing without requiring a live server.
+
+        Parameters:
+            session (httpx.Client): The httpx.Client session to use for requests.
+        """
+        self._session = session
+
     def require_collection(
             self,
             collection: str,
