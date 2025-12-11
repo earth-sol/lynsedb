@@ -381,6 +381,16 @@ class HTTPClient:
     def __str__(self):
         return self.__repr__()
 
+    def close(self):
+        """Close the underlying HTTP session."""
+        self._session.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
 
 class Collection:
     """
